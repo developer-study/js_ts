@@ -59,15 +59,46 @@ const store: Store = {
   feeds: [],
 }
 
+
+// function getData<AjaxResponse>(url: string, async = false): AjaxResponse {
+//   ajax.open('GET', url, async);
+//   ajax.send();
+  
+//   return JSON.parse(ajax.response);
+// }
+
+class Api {
+  url: string;
+  ajax: XMLHttpRequest;
+
+  constructor(url: string) {
+    this.url = url;
+    this.ajax = new XMLHttpRequest();
+  }
+
+  protected getRequest<AjaxResponse>(): AjaxResponse {
+    this.ajax.open('GET', this.url, false);
+    this.ajax.send();
+    
+    return JSON.parse(this.ajax.response);
+  }
+}
+
+class NewsFeedApi extends Api {
+  getData(): NewsFeed[] {
+    return this.getRequest<NewsFeed[]>();
+  }
+}
+
+class NewsDetailApi extends Api {
+  getData(): NewsDetail {
+    return this.getRequest<NewsDetail>();
+  }
+}
+
 /**
  * XMLHttpRequest.open(method:string, url:string, async:boolean)
  */
-function getData<AjaxResponse>(url: string, async = false): AjaxResponse {
-  ajax.open('GET', url, async);
-  ajax.send();
-  
-  return JSON.parse(ajax.response);
-}
 
 function makeFeeds(feeds: NewsFeed[]): NewsFeed[] {
   for(let i = 0; i < feeds.length; i++) {
@@ -86,6 +117,7 @@ function updateView(html: string): void {
 }
 
 function newsFeed(): void {
+  const api = new NewsFeedApi(NEWS_URL);
   let newsFeed: NewsFeed[] = store.feeds;
   const newsList = [];
 
@@ -115,7 +147,7 @@ function newsFeed(): void {
   `
 
   if(newsFeed.length === 0) {
-    newsFeed = store.feeds = makeFeeds(getData<NewsFeed[]>(NEWS_URL));
+    newsFeed = store.feeds = makeFeeds(api.getData());
   }
 
   for(let i = (store.currentPage - 1) * 10; i < store.currentPage * 10; i++) {
@@ -168,9 +200,11 @@ function makeComment(comments: NewsComment[]): string {
   }
   return commentString.join('');
 }
+
 function newsDetail(): void {
   const id = location.hash.substring(7);
-  const newsContent = getData<NewsDetail>(CONTENT_URL.replace('@id', id))
+  const api = new NewsDetailApi(CONTENT_URL.replace('@id', id));
+  const newsContent = api.getData();
 
   let template = `
     <div class="bg-gray-600 min-h-screen pb-8">
